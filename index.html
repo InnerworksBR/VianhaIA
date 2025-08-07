@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Agente IA</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="chat-container">
+        <header class="chat-header">
+            <h1>Vianinha IA ✨</h1>
+            <p>Seu assistente escoteiro online</p>
+        </header>
+        <main class="chat-messages">
+            <div class="message-wrapper">
+                <div class="message ai">
+                    <div class="message-content">
+                        <p>Olá! Como posso te ajudar hoje?</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <footer class="chat-input-area">
+            <form id="chat-form">
+                <input type="text" id="message-input" placeholder="Digite sua mensagem aqui..." autocomplete="off">
+                <button type="submit" class="send-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </form>
+        </footer>
+    </div>
+
+    <script>
+    const form = document.getElementById('chat-form');
+    const input = document.getElementById('message-input');
+    const messagesContainer = document.querySelector('.chat-messages');
+
+    // --- NOVA LÓGICA DE SESSION ID ---
+    let sessionId = localStorage.getItem('chatSessionId');
+    if (!sessionId) {
+        // Se não houver ID de sessão, cria um novo ID único
+        sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        localStorage.setItem('chatSessionId', sessionId);
+        console.log('Nova Session ID criada:', sessionId);
+    } else {
+        console.log('Session ID existente:', sessionId);
+    }
+    // ------------------------------------
+
+    function formatMessageText(text) {
+        const formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        return formattedText;
+    }
+
+    function addMessage(text, sender) {
+        const messageWrapper = document.createElement('div');
+        messageWrapper.className = `message-wrapper ${sender === 'user' ? 'user-wrapper' : ''}`;
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+        
+        const messageContent = document.createElement('div');
+        messageContent.className = 'message-content';
+
+        if (sender === 'ai' && text === '...') {
+            messageDiv.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+        } else {
+            const formattedHtml = formatMessageText(text);
+            messageContent.innerHTML = formattedHtml;
+        }
+        
+        messageDiv.appendChild(messageContent);
+        messageWrapper.appendChild(messageDiv);
+        messagesContainer.appendChild(messageWrapper);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        
+        return messageWrapper;
+    }
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const messageText = input.value.trim();
+        if (messageText === '') return;
+
+        addMessage(messageText, 'user');
+        input.value = '';
+
+        const typingMessage = addMessage('...', 'ai');
+
+        try {
+            const response = await fetch('http://localhost:3000/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                // Envia a mensagem E O SESSION ID para o backend
+                body: JSON.stringify({ 
+                    message: messageText,
+                    sessionId: sessionId // <-- NOVO
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'A resposta do servidor não foi OK');
+            }
+
+            const data = await response.json();
+            
+            if (!data.reply) {
+                throw new Error("A resposta da IA não contém a chave 'reply'. Verifique seu nó 'Respond to Webhook' no n8n.");
+            }
+
+            typingMessage.remove();
+
+            const paragraphs = data.reply.split('\n\n').filter(p => p.trim() !== '');
+
+            paragraphs.forEach((paragraph, index) => {
+                setTimeout(() => {
+                    addMessage(paragraph, 'ai');
+                }, index * 900);
+            });
+
+        } catch (error) {
+            console.error('Erro no chat:', error);
+            typingMessage.remove();
+            addMessage(`Ocorreu um erro: ${error.message}`, 'ai');
+        }
+    });
+</script>
+</body>
+</html>
