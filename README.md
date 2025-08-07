@@ -113,11 +113,6 @@ Agora você pode começar a conversar com seu agente!
 - [ ] **Streaming de Respostas**: Modificar o backend para usar Server-Sent Events (SSE) e exibir a resposta da IA palavra por palavra.
 - [ ] **Melhorar o Tratamento de Erros**: Adicionar mais feedback visual para o usuário caso ocorra um erro na comunicação com a IA.
 
-## 👤 Contato
-
-[SEU NOME] - [@SEU_LINKEDIN] - [SEU_EMAIL@exemplo.com]
-
-Link do Projeto: `https://github.com/SEU-USUARIO/NOME-DO-SEU-REPOSITORIO`
 
 ## 📄 Licença
 
